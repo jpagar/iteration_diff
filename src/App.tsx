@@ -67,7 +67,6 @@ function App() {
 
     reader.onload = (event) => {
       const data = event.target?.result as string;
-      console.log(data);
       const buffer = Buffer.from(data);
 
       const records: IterationFile[] = [];
@@ -108,7 +107,6 @@ function App() {
 
     reader.onload = (event) => {
       const data = event.target?.result as string;
-      console.log(data);
       const buffer = Buffer.from(data);
 
       const records: IterationFile[] = [];
@@ -158,7 +156,7 @@ function App() {
     });
   };
 
-  console.log(originalList);
+  console.log('Removed Items: ',comparisonResults.removedItems);
   return (
     <>
       <div className="flex gap-2 justify-center mt-6">
@@ -183,6 +181,9 @@ function App() {
         <Button onClick={() => compareLists(originalList, newList)}>
           Compare
         </Button>
+        <Button onClick={() => window.location.reload()}>
+          Clear
+        </Button>
       </div>
       <Alert className="container">
         <AlertTitle className="underline">Files being compared:</AlertTitle>
@@ -205,15 +206,18 @@ function App() {
       </Alert>
       <TableResults
         data={comparisonResults.removedItems}
-        caption="List of items removed"
+        caption="Items Removed"
+        onClick={() => copyTableToClipboard(comparisonResults.removedItems, 'Items Removed')}
       />
       <TableResults
         data={comparisonResults.addedItems}
-        caption="List of items added"
+        caption="Items Added"
+        onClick={() => copyTableToClipboard(comparisonResults.addedItems, 'Items Added')}
       />
       <TableResults
         data={comparisonResults.matchingItems}
-        caption="List of matching items"
+        caption="Matching Items"
+        onClick={() => copyTableToClipboard(comparisonResults.matchingItems, 'Matching Items')}
       />
     </>
   );
@@ -232,16 +236,49 @@ const copyToClipboard = (value: string) => {
   });
 };
 
+const copyTableToClipboard = (data: IterationFile[], caption: string) => {
+  const headers = ['ID', 'Work Item Type', 'Title', 'Assigned To', 'State'];
+  const headersString = headers.join('\t');
+
+  const tableString = data.map(item =>
+    `${item.ID}\t${item['Work Item Type']}\t${item.Title}\t${item['Assigned To']}\t${item.State}`
+  ).join('\n');
+
+  const fullTableString = headersString + '\n' + tableString;
+
+  navigator.clipboard.writeText(fullTableString).then(() => {
+    toast.success(`${caption} table copied!`, {
+      position: 'top-right',
+      autoClose: 3000,
+      pauseOnHover: true,
+      hideProgressBar: false,
+      closeOnClick: true,
+      theme: 'colored'
+    });
+  });
+};
+
 interface TableProps {
   data: IterationFile[];
   caption: string;
+  onClick?: () => void;
 }
 
-const TableResults: FC<TableProps> = ({ data, caption }) => {
+const TableResults: FC<TableProps> = ({ data, caption, onClick }) => {
   return (
     <div className="container">
-      <h2 className="text-lg font-bold underline underline-offset-4 mt-6 mb-4">
-        {caption}
+      <h2
+        className="text-lg font-bold underline underline-offset-4 mt-6 mb-4 cursor-pointer"
+        onClick={onClick}
+      >
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger>{caption}</TooltipTrigger>
+            <TooltipContent>
+              <p>Click here to copy {caption}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </h2>
       <Table>
         <TableHeader className="bg-[#133157]">
