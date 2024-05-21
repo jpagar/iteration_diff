@@ -1,7 +1,7 @@
 import React, { FC, useRef, useState } from 'react';
-import {Buffer} from 'buffer';
-import {parse} from 'csv-parse/browser/esm'
-import * as xlsx from 'xlsx'
+import { Buffer } from 'buffer';
+import { parse } from 'csv-parse/browser/esm';
+import * as xlsx from 'xlsx';
 import { CopyIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button.tsx';
@@ -27,11 +27,15 @@ import _ from 'lodash';
 
 interface IterationFile {
   ID: string;
-  'Work Item Type': string;
   Title: string;
   'Assigned To': string;
+  'DEV Tester': string;
+  'QA Tester': string;
   State: string;
-  Tags: string;
+  Escalation: string;
+  TargetDate: string;
+  FleetTracking: string;
+  MondayComID: string;
 }
 
 function App() {
@@ -72,7 +76,7 @@ function App() {
 
       const records: IterationFile[] = [];
 
-      if(file.name.endsWith('.csv')) {
+      if (file.name.endsWith('.csv')) {
         parse(
           buffer,
           {
@@ -93,8 +97,7 @@ function App() {
             setOriginalList(records);
           }
         );
-      }
-      else if (file.name.endsWith('xlsx') || file.name.endsWith('xls')) {
+      } else if (file.name.endsWith('xlsx') || file.name.endsWith('xls')) {
         const workbook = xlsx.read(new Uint8Array(data), { type: 'array' });
         const worksheet = workbook.Sheets[workbook.SheetNames[0]];
         const jsonRecords: IterationFile[] = xlsx.utils.sheet_to_json(worksheet);
@@ -120,7 +123,7 @@ function App() {
 
       const records: IterationFile[] = [];
 
-      if(file.name.endsWith('.csv')) {
+      if (file.name.endsWith('.csv')) {
         parse(
           buffer,
           {
@@ -141,8 +144,7 @@ function App() {
             setNewList(records);
           }
         );
-      }
-      else if (file.name.endsWith('xlsx') || file.name.endsWith('xls')) {
+      } else if (file.name.endsWith('xlsx') || file.name.endsWith('xls')) {
         const workbook = xlsx.read(new Uint8Array(data), { type: 'array' });
         const worksheet = workbook.Sheets[workbook.SheetNames[0]];
         const jsonRecords: IterationFile[] = xlsx.utils.sheet_to_json(worksheet);
@@ -172,7 +174,9 @@ function App() {
     });
   };
 
-  console.log('Removed Items: ',comparisonResults.removedItems);
+  console.log('Removed Items: ', comparisonResults.removedItems);
+  console.log('Added Items: ', comparisonResults.addedItems);
+  console.log('Matching Items: ', comparisonResults.matchingItems);
   return (
     <>
       <div className="flex gap-2 justify-center mt-6">
@@ -253,11 +257,11 @@ const copyToClipboard = (value: string) => {
 };
 
 const copyTableToClipboard = (data: IterationFile[], caption: string) => {
-  const headers = ['ID', 'Work Item Type', 'Title', 'Assigned To', 'State'];
+  const headers = ['ID', 'Title', 'Assigned To', 'DEV Tester', 'QA Tester', 'State', 'Escalation', 'Target Date', 'FleetTracking', 'MondayCom ID'];
   const headersString = headers.join('\t');
 
-  const tableString = data.map(item =>
-    `${item.ID}\t${item['Work Item Type']}\t${item.Title}\t${item['Assigned To']}\t${item.State}`
+  const tableString = data.map((item: IterationFile) =>
+    `${item.ID}\t${item.Title}\t${item['Assigned To'] || ''}\t${item['DEV Tester'] || ''}\t${item['QA Tester'] || ''}\t${item.State || ''}\t${item.Escalation || ''}\t${item.TargetDate || ''}\t${item.FleetTracking || ''}\t${item.MondayComID || ''}`
   ).join('\n');
 
   const fullTableString = headersString + '\n' + tableString;
@@ -282,7 +286,7 @@ interface TableProps {
 
 const TableResults: FC<TableProps> = ({ data, caption, onClick }) => {
   return (
-    <div className="container">
+    <div className="mx-2">
       <h2
         className="text-lg font-bold underline underline-offset-4 mt-6 mb-4 cursor-pointer"
         onClick={onClick}
@@ -300,11 +304,15 @@ const TableResults: FC<TableProps> = ({ data, caption, onClick }) => {
         <TableHeader className="bg-[#133157]">
           <TableRow>
             <TableHead className="text-white/80 font-bold">ID</TableHead>
-            <TableHead className="text-white/80 font-bold">Work Item Type</TableHead>
             <TableHead className="text-white/80 font-bold">Title</TableHead>
             <TableHead className="text-white/80 font-bold">Assigned To</TableHead>
+            <TableHead className="text-white/80 font-bold">DEV Tester</TableHead>
+            <TableHead className="text-white/80 font-bold">QA Tester</TableHead>
             <TableHead className="text-white/80 font-bold">State</TableHead>
-            <TableHead className="text-white/80 font-bold"></TableHead>
+            <TableHead className="text-white/80 font-bold">Escalation</TableHead>
+            <TableHead className="text-white/80 font-bold">Target Date</TableHead>
+            <TableHead className="text-white/80 font-bold">FleetTracking</TableHead>
+            <TableHead className="text-white/80 font-bold">MondayCom ID</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -316,12 +324,6 @@ const TableResults: FC<TableProps> = ({ data, caption, onClick }) => {
                   className="font-medium cursor-pointer hover:bg-muted/50 text-right"
                 >
                   <div className="flex gap-2">{item.ID}</div>
-                </TableCell>
-                <TableCell
-                  className="cursor-pointer hover:bg-muted/50"
-                  onClick={() => copyToClipboard(item['Work Item Type'])}
-                >
-                  {item['Work Item Type']}
                 </TableCell>
                 <TableCell
                   className="cursor-pointer hover:bg-muted/50"
@@ -337,9 +339,45 @@ const TableResults: FC<TableProps> = ({ data, caption, onClick }) => {
                 </TableCell>
                 <TableCell
                   className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => copyToClipboard(item['DEV Tester'])}
+                >
+                  {item['DEV Tester']}
+                </TableCell>
+                <TableCell
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => copyToClipboard(item['QA Tester'])}
+                >
+                  {item['QA Tester']}
+                </TableCell>
+                <TableCell
+                  className="cursor-pointer hover:bg-muted/50"
                   onClick={() => copyToClipboard(item.State)}
                 >
                   {item.State}
+                </TableCell>
+                <TableCell
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => copyToClipboard(item.Escalation ? item.Escalation : '')}
+                >
+                  {item.Escalation}
+                </TableCell>
+                <TableCell
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => copyToClipboard(item.TargetDate)}
+                >
+                  {item.TargetDate}
+                </TableCell>
+                <TableCell
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => copyToClipboard(item.FleetTracking)}
+                >
+                  {item.FleetTracking}
+                </TableCell>
+                <TableCell
+                  className="cursor-pointer hover:bg-muted/50"
+                  onClick={() => copyToClipboard(item.MondayComID)}
+                >
+                  {item.MondayComID}
                 </TableCell>
                 <TableCell
                   onClick={() => copyToClipboard(`${item.ID} - ${item.Title}`)}
