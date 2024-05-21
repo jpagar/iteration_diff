@@ -1,6 +1,7 @@
 import React, { FC, useRef, useState } from 'react';
 import {Buffer} from 'buffer';
 import {parse} from 'csv-parse/browser/esm'
+import * as xlsx from 'xlsx'
 import { CopyIcon } from 'lucide-react';
 
 import { Button } from '@/components/ui/button.tsx';
@@ -66,35 +67,43 @@ function App() {
     const reader = new FileReader();
 
     reader.onload = (event) => {
-      const data = event.target?.result as string;
+      const data = event.target?.result as ArrayBuffer;
       const buffer = Buffer.from(data);
 
       const records: IterationFile[] = [];
 
-      parse(
-        buffer,
-        {
-          columns: true,
-          skip_empty_lines: true,
-          trim: true,
-          bom: true,
-        },
-        (err, parsedData) => {
-          if (err) {
-            console.error('Error parsing the file:', err);
-            return;
-          }
+      if(file.name.endsWith('.csv')) {
+        parse(
+          buffer,
+          {
+            columns: true,
+            skip_empty_lines: true,
+            trim: true,
+            bom: true
+          },
+          (err, parsedData) => {
+            if (err) {
+              console.error('Error parsing the file:', err);
+              return;
+            }
 
-          for (const record of parsedData) {
-            records.push(record);
+            for (const record of parsedData) {
+              records.push(record);
+            }
+            setOriginalList(records);
           }
+        );
+      }
+      else if (file.name.endsWith('xlsx') || file.name.endsWith('xls')) {
+        const workbook = xlsx.read(new Uint8Array(data), { type: 'array' });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonRecords: IterationFile[] = xlsx.utils.sheet_to_json(worksheet);
+        setOriginalList(jsonRecords);
+      }
 
-          setOriginalList(records);
-        },
-      );
     };
 
-    reader.readAsText(file);
+    reader.readAsArrayBuffer(file);
   };
   const modifiedFileList = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
@@ -106,35 +115,42 @@ function App() {
     const reader = new FileReader();
 
     reader.onload = (event) => {
-      const data = event.target?.result as string;
+      const data = event.target?.result as ArrayBuffer;
       const buffer = Buffer.from(data);
 
       const records: IterationFile[] = [];
 
-      parse(
-        buffer,
-        {
-          columns: true,
-          skip_empty_lines: true,
-          trim: true,
-          bom: true,
-        },
-        (err, parsedData) => {
-          if (err) {
-            console.error('Error parsing the file:', err);
-            return;
-          }
+      if(file.name.endsWith('.csv')) {
+        parse(
+          buffer,
+          {
+            columns: true,
+            skip_empty_lines: true,
+            trim: true,
+            bom: true
+          },
+          (err, parsedData) => {
+            if (err) {
+              console.error('Error parsing the file:', err);
+              return;
+            }
 
-          for (const record of parsedData) {
-            records.push(record);
+            for (const record of parsedData) {
+              records.push(record);
+            }
+            setNewList(records);
           }
-
-          setNewList(records);
-        },
-      );
+        );
+      }
+      else if (file.name.endsWith('xlsx') || file.name.endsWith('xls')) {
+        const workbook = xlsx.read(new Uint8Array(data), { type: 'array' });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonRecords: IterationFile[] = xlsx.utils.sheet_to_json(worksheet);
+        setNewList(jsonRecords);
+      }
     };
 
-    reader.readAsText(file);
+    reader.readAsArrayBuffer(file);
   };
 
   const compareLists = (
